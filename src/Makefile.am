@@ -2,6 +2,8 @@ bin_PROGRAMS = \
 	notbit \
 	$(NULL)
 
+lib_LTLIBRARIES = libnotbit.la
+
 noinst_PROGRAMS = dump-store
 
 AM_CPPFLAGS = \
@@ -9,7 +11,7 @@ AM_CPPFLAGS = \
 	$(NOTBIT_EXTRA_CFLAGS) \
 	$(NULL)
 
-notbit_SOURCES = \
+libnotbit_la_SOURCES = \
 	ntb-address.c \
 	ntb-address.h \
 	ntb-base58.c \
@@ -101,16 +103,16 @@ notbit_SOURCES = \
 	ntb-store.h \
 	ntb-util.c \
 	ntb-util.h \
-	main.c \
 	$(NULL)
 
-notbit_LDFLAGS = \
-	-pthread \
-	$(NULL)
+notbit_SOURCES = main.c
 
-notbit_LDADD = \
+notbit_LDADD = libnotbit.la
+
+libnotbit_la_LDFLAGS = \
 	$(LIBCRYPTO_LIBS) \
 	$(NOTBIT_EXTRA_LIBS) \
+	-pthread \
 	$(NULL)
 
 dump_store_SOURCES = \
@@ -123,6 +125,7 @@ dump_store_SOURCES = \
 
 dump_store_LDFLAGS = \
 	-pthread \
+	libnotbit.la \
 	$(NULL)
 
 NOTBIT_LINKS = \

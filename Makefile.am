@@ -7,6 +7,7 @@ SUBDIRS = \
 	doc \
 	src \
 	build \
+	tests \
 	$(NULL)
 
 EXTRA_DIST = \
