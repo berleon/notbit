@@ -7,8 +7,10 @@ AM_CONFIG_HEADER([config.h])
 AC_GNU_SOURCE
 
 AC_PROG_CC
+AC_PROG_CXX
 
 AC_PROG_LN_S
+
 AC_PROG_LIBTOOL
 
 AM_INIT_AUTOMAKE([1.9 foreign no-dist-gzip dist-xz tar-ustar])
@@ -17,8 +19,6 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 NOTBIT_EXTRA_CFLAGS=""
 NOTBIT_EXTRA_LIBS=""
-
-AM_PATH_CHECK()
 
 AC_C_BIGENDIAN([AC_DEFINE([HAVE_BIG_ENDIAN], [1], [System is big-endian])],
                [AC_DEFINE([HAVE_LITTLE_ENDIAN], [1],

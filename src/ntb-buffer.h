@@ -29,6 +29,12 @@
 
 #include "ntb-util.h"
 
+
+#ifdef __cplusplus
+extern "C"{
+#endif
+
+
 struct ntb_buffer {
         uint8_t *data;
         size_t length;
@@ -79,5 +85,9 @@ ntb_buffer_append_string(struct ntb_buffer *buffer,
 
 void
 ntb_buffer_destroy(struct ntb_buffer *buffer);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* NTB_BUFFER_H */
