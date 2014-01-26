@@ -1,5 +1,8 @@
 #! /usr/bin/env bash
 
+# propagate errors
+set -e
+
 test_file="*"
 if [ -n "$1" ]
 then
@@ -7,13 +10,13 @@ then
 fi
 echo "$test_file"
 make check
-echo 
+echo
 echo "> Start running Tests..."
 find tests/ -maxdepth 1 -name "$test_file" -executable -type f | while read line;
 do
   echo
   echo "> Test >  $line"
-  echo 
+  echo
   $(echo $(pwd)/$line)
 done
 echo
