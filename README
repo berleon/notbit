@@ -45,6 +45,8 @@ Now you can run the following commands to build Notbit:
 This will install notbit into your home directory. The executable will
 be in ~/bin which is typically already in your search path.
 
+For running test just use the run_tests.sh script.
+
 Running Notbit
 ━━━━━━━━━━━━━━
 

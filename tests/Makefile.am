@@ -1,5 +1,5 @@
+check_PROGRAMS = test_ntb_buffer test_ntb_buffer_copy
 
-check_PROGRAMS = test_ntb_buffer
 
 AM_DEFAULT_SOURCE_EXT = .cc
 
