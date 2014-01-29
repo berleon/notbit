@@ -29,6 +29,11 @@
 
 #include "ntb-util.h"
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
+
 size_t
 ntb_base58_encode(const uint8_t *input,
                   size_t length,
@@ -39,5 +44,9 @@ ntb_base58_decode(const char *input,
                   size_t input_length,
                   uint8_t *output,
                   size_t output_length);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* NTB_BASE58_H */

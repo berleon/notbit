@@ -39,18 +39,17 @@ libtool
 /src/notbit-sendmail
 /src/notbit-keygen
 /src/dump-store
-/src/.libs/
 /src/libnotbit.la
 
-/tests/.libs/
 /tests/Makefile
 /tests/Makefile.in
-/tests/check_notbit
-/tests/check_notbit.log
-/tests/check_notbit.trs
 /tests/test-suite.log
+
+/tests/test_ntb_buffer
+/tests/test_ntb_base58
 
 
 *.o
 *.lo
 .deps
+.libs
