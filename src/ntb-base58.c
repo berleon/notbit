@@ -59,12 +59,15 @@ ntb_base58_encode(const uint8_t *input,
         if (BN_bin2bn(input, length, &val) == NULL)
                 ntb_fatal("A big number operation failed");
 
-        while (!BN_is_zero(&val)) {
-                part = BN_div_word(&val, 58);
-                assert(part >= 0 && part < 58);
-                *(p++) = alphabet[part];
+        if (BN_is_zero(&val)) {
+                *(p++) = alphabet[0];
+        } else  {
+                while (!BN_is_zero(&val)) {
+                        part = BN_div_word(&val, 58);
+                        assert(part >= 0 && part < 58);
+                        *(p++) = alphabet[part];
+                }
         }
-
         BN_free(&val);
 
         /* Make it big-endian */
@@ -127,7 +130,12 @@ ntb_base58_decode(const char *input,
         if (n_bytes > output_length)
                 return -1;
 
-        BN_bn2bin(&val, output);
+        // BN_bn2bin will not write the zero to output
+        if (n_bytes == 0 && input_length == 1 && input[0] == alphabet[0]) {
+                output[0] = 0;
+                n_bytes = 1;
+        } else
+                BN_bn2bin(&val, output);
 
         BN_free(&val);
 
