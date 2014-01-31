@@ -1,4 +1,24 @@
 
+#include <stdbool.h>
+
+struct ntb_run_context {
+    struct ntb_main_context * nm;
+    struct ntb_config * config;
+    struct ntb_error * error;
+};
+
+
+struct ntb_run_config {
+        struct address *option_listen_addresses;
+        struct address *option_peer_addresses;
+        char *option_log_file;
+        bool option_daemonize;
+        char *option_user;
+        char *option_group;
+        char *option_store_directory;
+        bool option_only_explicit_addresses;
+};
+
 static void
 add_address(struct address **list,
             const char *address)
