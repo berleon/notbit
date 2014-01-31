@@ -179,12 +179,12 @@ add_listen_address_to_network(struct ntb_network *nw,
 }
 
 static bool
-add_addresses(struct ntb_network *nw,
+add_addresses(struct ntb_run_config * rc,struct ntb_network *nw,
               struct ntb_error **error)
 {
         struct address *address;
 
-        for (address = option_listen_addresses;
+        for (address = rc->option_listen_addresses;
              address;
              address = address->next) {
                 if (!add_listen_address_to_network(nw,
@@ -193,7 +193,7 @@ add_addresses(struct ntb_network *nw,
                         return false;
         }
 
-        for (address = option_peer_addresses;
+        for (address = rc->option_peer_addresses;
              address;
              address = address->next) {
                 if (!ntb_network_add_peer_address(nw,
@@ -202,22 +202,23 @@ add_addresses(struct ntb_network *nw,
                         return false;
         }
 
-        if (option_only_explicit_addresses)
+        if (rc->option_only_explicit_addresses)
                 ntb_network_set_only_use_explicit_addresses(nw, true);
 
         return true;
 }
 
 static bool
-set_log_file(struct ntb_store *store,
+set_log_file(struct ntb_run_config * rc,
+             struct ntb_store *store,
              struct ntb_error **error)
 {
         struct ntb_buffer buffer;
         bool res;
 
-        if (option_log_file) {
-                return ntb_log_set_file(option_log_file, error);
-        } else if (option_daemonize) {
+        if (rc->option_log_file) {
+                return ntb_log_set_file(rc->option_log_file, error);
+        } else if (rc->option_daemonize) {
                 ntb_buffer_init(&buffer);
                 ntb_buffer_append_string(&buffer,
                                          ntb_store_get_directory(store));
