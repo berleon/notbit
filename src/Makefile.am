@@ -76,6 +76,8 @@ libnotbit_la_SOURCES = \
 	ntb-netaddress.h \
 	ntb-network.c \
 	ntb-network.h \
+	ntb-run.c \
+	ntb-run.h \
 	ntb-parse-addresses.c \
 	ntb-parse-addresses.h \
 	ntb-parse-content-type.c \

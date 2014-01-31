@@ -1,18 +1,35 @@
+#include "config.h"
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdint.h>
 #include <stdbool.h>
+#include <unistd.h>
+#include <string.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <pwd.h>
+#include <grp.h>
+#include <sys/types.h>
 
-#include "ntb-keyring.h"
+#include "ntb-main-context.h"
+#include "ntb-log.h"
+#include "ntb-network.h"
 #include "ntb-store.h"
+#include "ntb-proto.h"
+#include "ntb-file-error.h"
+#include "ntb-keyring.h"
+#include "ntb-ipc.h"
+#include "ntb-run.h"
 
 struct ntb_run_context {
-        struct ntb_main_context * nm;
+        struct ntb_main_context * mc;
         struct ntb_run_config * config;
         struct ntb_error * error;
         struct ntb_network * network;
         struct ntb_keyring * keyring;
         struct ntb_store * store;
 };
-
 
 struct ntb_run_config {
         struct address *option_listen_addresses;
@@ -26,27 +43,84 @@ struct ntb_run_config {
         bool option_only_explicit_addresses;
 };
 
+struct address {
+        /* Only one of these will be set depending on whether the user
+         * specified a full address or just a port */
+        const char *address;
+        const char *port;
+
+        struct address *next;
+};
+
+static bool
+set_log_file(struct ntb_run_config * rc,
+             struct ntb_store *store,
+             struct ntb_error **error)
+{
+        struct ntb_buffer buffer;
+        bool res;
+
+        if (rc->option_log_file) {
+                return ntb_log_set_file(rc->option_log_file, error);
+        } else if (rc->option_daemonize) {
+                ntb_buffer_init(&buffer);
+                ntb_buffer_append_string(&buffer,
+                                         ntb_store_get_directory(store));
+                if (buffer.length > 0 && buffer.data[buffer.length - 1] != '/')
+                        ntb_buffer_append_c(&buffer, '/');
+                ntb_buffer_append_string(&buffer, "notbit.log");
+
+                res = ntb_log_set_file((const char *) buffer.data, error);
+
+                ntb_buffer_destroy(&buffer);
+
+                return res;
+        } else {
+                return ntb_log_set_file("/dev/stdout", error);
+        }
+}
+
 struct ntb_run_context *
 ntb_run_context_new(struct ntb_run_config * config)
 {
         struct ntb_run_context * rc;
-        rc->config = config;
         rc = ntb_alloc(sizeof (struct ntb_run_context));
+
+        rc->config = config;
 
         rc->network = ntb_network_new();
         rc->store = ntb_store_new(rc->config->option_store_directory,
                                       rc->config->option_mail_dir,
-                                      rc->error);
+                                      &rc->error);
 
-        rc->keyring = ntb_keyring_new(rc->network);
+        if (rc->store == NULL) {
+                fprintf(stderr, "%s\n", rc->error->message);
+                return NULL;
+        } else {
+                ntb_store_set_default(rc->store);
+
+                if (!set_log_file(rc->config, rc->store, &rc->error)) {
+                    return NULL;
+                }
+
+                rc->keyring = ntb_keyring_new(rc->network);
+        }
+        return rc;
 }
 void
 ntb_run_context_free(struct ntb_run_context * rc)
 {
-    ntb_store_free(rc->store);
-    ntb_keyring_free(rc->keyring);
-    ntb_network_free(rc->network);
-    ntb_free(rc);
+        ntb_keyring_free(rc->keyring);
+        ntb_network_free(rc->network);
+        /* We need to free the store after freeing the network so that
+         * if the network queues anything in the store just before it
+         * is freed then we will be sure to complete the task before
+         * exiting */
+        if (rc->store)
+                ntb_store_free(rc->store);
+
+        ntb_free(rc);
+        ntb_log_close();
 }
 
 static void
@@ -216,29 +290,10 @@ set_log_file(struct ntb_run_config * rc,
         struct ntb_buffer buffer;
         bool res;
 
-        if (rc->option_log_file) {
-                return ntb_log_set_file(rc->option_log_file, error);
-        } else if (rc->option_daemonize) {
-                ntb_buffer_init(&buffer);
-                ntb_buffer_append_string(&buffer,
-                                         ntb_store_get_directory(store));
-                if (buffer.length > 0 && buffer.data[buffer.length - 1] != '/')
-                        ntb_buffer_append_c(&buffer, '/');
-                ntb_buffer_append_string(&buffer, "notbit.log");
-
-                res = ntb_log_set_file((const char *) buffer.data, error);
-
-                ntb_buffer_destroy(&buffer);
-
-                return res;
-        } else {
-                return ntb_log_set_file("/dev/stdout", error);
-        }
-}
 
 
 void
-ntb_run_main_loop(struct ntb_run_context * rc)
+ntb_run_network(struct ntb_run_context * rc)
 {
         struct ntb_main_context_source *quit_source;
         bool quit = false;
@@ -250,15 +305,15 @@ ntb_run_main_loop(struct ntb_run_context * rc)
 
         ntb_keyring_start(rc->keyring);
         ntb_store_start(rc->store);
-        ntb_log_start(rc);
+        ntb_log_start();
 
         ntb_network_load_store(rc->network);
         ntb_keyring_load_store(rc->keyring);
 
-        quit_source = ntb_main_context_add_quit(NULL, quit_cb, &quit);
+        quit_source = ntb_main_context_add_quit(rc->mc, quit_cb, &quit);
 
         do
-                ntb_main_context_poll(NULL);
+                ntb_main_context_poll(rc->mc);
         while(!quit);
 
         ntb_log("Exiting...");
@@ -266,65 +321,3 @@ ntb_run_main_loop(struct ntb_run_context * rc)
         ntb_main_context_remove_source(quit_source);
 }
 
-int
-ntb_run_network(struct ntb_run_context * rc)
-{
-        struct ntb_store *store = NULL;
-        struct ntb_network *nw;
-        struct ntb_keyring *keyring;
-        struct ntb_ipc *ipc;
-        int ret = EXIT_SUCCESS;
-
-        nw = ntb_network_new();
-
-        if (!add_addresses(nw, rc->error)) {
-                fprintf(stderr, "%s\n", rc->error->message);
-                ntb_error_clear(&rc->error);
-                ret = EXIT_FAILURE;
-        } else {
-                store = ntb_store_new(rc->config->option_store_directory,
-                                      rc->config->option_mail_dir,
-                                      rc->error);
-
-                if (store == NULL) {
-                        fprintf(stderr, "%s\n", rc->error->message);
-                        ntb_error_clear(&rc->error);
-                        ret = EXIT_FAILURE;
-                } else {
-                        ntb_store_set_default(store);
-
-                        if (!set_log_file(store, &rc->error)) {
-                                fprintf(stderr, "%s\n", rc->error->message);
-                                ntb_error_clear(&rc->error);
-                                ret = EXIT_FAILURE;
-                        } else {
-                                keyring = ntb_keyring_new(nw);
-                                ipc = ntb_ipc_new(keyring, &rc->error);
-
-                                if (ipc == NULL) {
-                                        fprintf(stderr, "%s\n", rc->error->message);
-                                        ntb_error_clear(&rc->error);
-                                        ret = EXIT_FAILURE;
-                                } else {
-                                        run_main_loop(nw, keyring, store);
-                                        ntb_ipc_free(ipc);
-                                }
-
-                                ntb_keyring_free(keyring);
-
-                                ntb_log_close();
-                        }
-                }
-        }
-
-        ntb_network_free(nw);
-
-        /* We need to free the store after freeing the network so that
-         * if the network queues anything in the store just before it
-         * is freed then we will be sure to complete the task before
-         * exiting */
-        if (store)
-                ntb_store_free(store);
-
-        return ret;
-}
