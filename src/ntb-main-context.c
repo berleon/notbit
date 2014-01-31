@@ -147,7 +147,7 @@ static void
 async_pipe_cb(struct ntb_main_context_source *source,
               int fd,
               enum ntb_main_context_poll_flags flags,
-              void *user_data)
+              void *user_data
 {
         struct ntb_main_context *mc = user_data;
         struct ntb_main_context_source *quit_source;

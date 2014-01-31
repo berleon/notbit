@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <netinet/in.h>
+#include <netdb.h>
 
 struct ntb_netaddress {
         /* This is in network byte order. It is the same format as in
