@@ -1,10 +1,16 @@
 
 #include <stdbool.h>
 
+#include "ntb-keyring.h"
+#include "ntb-store.h"
+
 struct ntb_run_context {
-    struct ntb_main_context * nm;
-    struct ntb_config * config;
-    struct ntb_error * error;
+        struct ntb_main_context * nm;
+        struct ntb_run_config * config;
+        struct ntb_error * error;
+        struct ntb_network * network;
+        struct ntb_keyring * keyring;
+        struct ntb_store * store;
 };
 
 
@@ -16,8 +22,32 @@ struct ntb_run_config {
         char *option_user;
         char *option_group;
         char *option_store_directory;
+        char *option_mail_dir;
         bool option_only_explicit_addresses;
 };
+
+struct ntb_run_context *
+ntb_run_context_new(struct ntb_run_config * config)
+{
+        struct ntb_run_context * rc;
+        rc->config = config;
+        rc = ntb_alloc(sizeof (struct ntb_run_context));
+
+        rc->network = ntb_network_new();
+        rc->store = ntb_store_new(rc->config->option_store_directory,
+                                      rc->config->option_mail_dir,
+                                      rc->error);
+
+        rc->keyring = ntb_keyring_new(rc->network);
+}
+void
+ntb_run_context_free(struct ntb_run_context * rc)
+{
+    ntb_store_free(rc->store);
+    ntb_keyring_free(rc->keyring);
+    ntb_network_free(rc->network);
+    ntb_free(rc);
+}
 
 static void
 add_address(struct address **list,
@@ -58,170 +88,7 @@ free_addresses(struct address *list)
         }
 }
 
-static void
-usage(void)
-{
-        printf("Notbit - a Bitmessage → maildir daemon\n"
-               "usage: notbit [options]...\n"
-               " -h                    Show this help message\n"
-               " -p <port>             Specifies a port to listen on.\n"
-               "                       Equivalent to -a [::]:port.\n"
-               " -a <address[:port]>   Add an address to listen on. Can be\n"
-               "                       specified multiple times. Defaults to\n"
-               "                       [::] to listen on port "
-               NTB_STRINGIFY(NTB_PROTO_DEFAULT_PORT) "\n"
-               " -P <address[:port]>   Add to the list of initial peers that\n"
-               "                       might be connected to.\n"
-               " -e                    Only connect to peers specified by "
-               ""                      "-P\n"
-               " -l <file>             Specify the pathname for the log file\n"
-               "                       Defaults to stdout.\n"
-               " -d                    Fork and detach from terminal after\n"
-               "                       creating listen socket. (Daemonize)\n"
-               " -u <user>             Specify a user to run as. Used to drop\n"
-               "                       privileges.\n"
-               " -g <group>            Specify a group to run as.\n"
-               " -D <datadir>          Specify an alternate location for the\n"
-               "                       object store. Defaults to $XDG_DATA_HOME"
-               ""                      "/notbit\n"
-               " -m <maildir>          Specify the maildir to save messages "
-               "to.\n"
-               "                       Defaults to $HOME/.maildir\n");
-        exit(EXIT_FAILURE);
-}
 
-static bool
-process_arguments(int argc, char **argv, struct ntb_error **error)
-{
-        int opt;
-
-        opterr = false;
-
-        while ((opt = getopt(argc, argv, options)) != -1) {
-                switch (opt) {
-                case ':':
-                case '?':
-                        ntb_set_error(error,
-                                      &arguments_error,
-                                      NTB_ARGUMENTS_ERROR_INVALID,
-                                      "invalid option '%c'",
-                                      optopt);
-                        goto error;
-
-                case '\1':
-                        ntb_set_error(error,
-                                      &arguments_error,
-                                      NTB_ARGUMENTS_ERROR_UNKNOWN,
-                                      "unexpected argument \"%s\"",
-                                      optarg);
-                        goto error;
-
-                case 'a':
-                        add_address(&option_listen_addresses, optarg);
-                        break;
-
-                case 'p':
-                        add_port(&option_listen_addresses, optarg);
-                        break;
-
-                case 'P':
-                        add_address(&option_peer_addresses, optarg);
-                        break;
-
-                case 'l':
-                        option_log_file = optarg;
-                        break;
-
-                case 'd':
-                        option_daemonize = true;
-                        break;
-
-                case 'u':
-                        option_user = optarg;
-                        break;
-
-                case 'g':
-                        option_group = optarg;
-                        break;
-
-                case 'D':
-                        option_store_directory = optarg;
-                        break;
-
-                case 'e':
-                        option_only_explicit_addresses = true;
-                        break;
-
-                case 'm':
-                        option_maildir = optarg;
-                        break;
-
-                case 'h':
-                        usage();
-                        break;
-                }
-        }
-
-        if (optind < argc) {
-                ntb_set_error(error,
-                              &arguments_error,
-                              NTB_ARGUMENTS_ERROR_UNKNOWN,
-                              "unexpected argument \"%s\"",
-                              argv[optind]);
-                goto error;
-        }
-
-        if (option_listen_addresses == NULL)
-                add_port(&option_listen_addresses,
-                         NTB_STRINGIFY(NTB_PROTO_DEFAULT_PORT));
-
-        return true;
-
-error:
-        free_addresses(option_peer_addresses);
-        option_peer_addresses = NULL;
-        free_addresses(option_listen_addresses);
-        option_listen_addresses = NULL;
-        return false;
-}
-
-static void
-daemonize(void)
-{
-        pid_t pid, sid;
-
-        pid = fork();
-
-        if (pid < 0) {
-                ntb_warning("fork failed: %s", strerror(errno));
-                exit(EXIT_FAILURE);
-        }
-        if (pid > 0)
-                /* Parent process, we can just quit */
-                exit(EXIT_SUCCESS);
-
-        /* Reset the file mask (not really sure why we do this..) */
-        umask(0);
-
-        /* Create a new SID for the child process */
-        sid = setsid();
-        if (sid < 0) {
-                ntb_warning("setsid failed: %s", strerror(errno));
-                exit(EXIT_FAILURE);
-        }
-
-        /* Change the working directory so we're resilient against it being
-           removed */
-        if (chdir("/") < 0) {
-                ntb_warning("chdir failed: %s", strerror(errno));
-                exit(EXIT_FAILURE);
-        }
-
-        /* Redirect standard files to /dev/null */
-        freopen("/dev/null", "r", stdin);
-        freopen("/dev/null", "w", stdout);
-        freopen("/dev/null", "w", stderr);
-}
 
 static void
 set_user(const char *user_name)
@@ -370,27 +237,22 @@ set_log_file(struct ntb_store *store,
 
 
 void
-ntb_run_main_loop(struct ntb_network *nw,
-              struct ntb_keyring *keyring,
-              struct ntb_store *store)
+ntb_run_main_loop(struct ntb_run_context * rc)
 {
         struct ntb_main_context_source *quit_source;
         bool quit = false;
 
-        if (option_group)
-                set_group(option_group);
-        if (option_user)
-                set_user(option_user);
+        if (rc->config->option_group)
+                set_group(rc->config->option_group);
+        if (rc->config->option_user)
+                set_user(rc->config->option_user);
 
-        if (option_daemonize)
-                daemonize();
+        ntb_keyring_start(rc->keyring);
+        ntb_store_start(rc->store);
+        ntb_log_start(rc);
 
-        ntb_keyring_start(keyring);
-        ntb_store_start(store);
-        ntb_log_start();
-
-        ntb_network_load_store(nw);
-        ntb_keyring_load_store(keyring);
+        ntb_network_load_store(rc->network);
+        ntb_keyring_load_store(rc->keyring);
 
         quit_source = ntb_main_context_add_quit(NULL, quit_cb, &quit);
 
@@ -404,7 +266,7 @@ ntb_run_main_loop(struct ntb_network *nw,
 }
 
 int
-ntb_run_network(struct ntb_api_context * ac)
+ntb_run_network(struct ntb_run_context * rc)
 {
         struct ntb_store *store = NULL;
         struct ntb_network *nw;
@@ -414,33 +276,33 @@ ntb_run_network(struct ntb_api_context * ac)
 
         nw = ntb_network_new();
 
-        if (!add_addresses(nw, &error)) {
-                fprintf(stderr, "%s\n", error->message);
-                ntb_error_clear(&error);
+        if (!add_addresses(nw, rc->error)) {
+                fprintf(stderr, "%s\n", rc->error->message);
+                ntb_error_clear(&rc->error);
                 ret = EXIT_FAILURE;
         } else {
-                store = ntb_store_new(ac->config->option_store_directory,
-                                      ac->config->option_mail_dir,
-                                      ac->error);
+                store = ntb_store_new(rc->config->option_store_directory,
+                                      rc->config->option_mail_dir,
+                                      rc->error);
 
                 if (store == NULL) {
-                        fprintf(stderr, "%s\n", error->message);
-                        ntb_error_clear(&error);
+                        fprintf(stderr, "%s\n", rc->error->message);
+                        ntb_error_clear(&rc->error);
                         ret = EXIT_FAILURE;
                 } else {
                         ntb_store_set_default(store);
 
-                        if (!set_log_file(store, &error)) {
-                                fprintf(stderr, "%s\n", error->message);
-                                ntb_error_clear(&error);
+                        if (!set_log_file(store, &rc->error)) {
+                                fprintf(stderr, "%s\n", rc->error->message);
+                                ntb_error_clear(&rc->error);
                                 ret = EXIT_FAILURE;
                         } else {
                                 keyring = ntb_keyring_new(nw);
-                                ipc = ntb_ipc_new(keyring, &error);
+                                ipc = ntb_ipc_new(keyring, &rc->error);
 
                                 if (ipc == NULL) {
-                                        fprintf(stderr, "%s\n", error->message);
-                                        ntb_error_clear(&error);
+                                        fprintf(stderr, "%s\n", rc->error->message);
+                                        ntb_error_clear(&rc->error);
                                         ret = EXIT_FAILURE;
                                 } else {
                                         run_main_loop(nw, keyring, store);
