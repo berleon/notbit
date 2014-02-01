@@ -47,6 +47,7 @@ libtool
 
 /tests/test_ntb_buffer
 /tests/test_ntb_base58
+/tests/test_ntb_api
 
 
 *.o

@@ -24,10 +24,21 @@
 #include "ntb-run.h"
 
 
+
+
 struct ntb_run_context *
 ntb_init(struct ntb_run_config * config)
 {
-    return ntb_run_context_new(config);
+        if (config == NULL) {
+            config = ntb_run_config_default();
+        }
+        return ntb_run_context_new(config);
+}
+
+void
+ntb_destroy(struct ntb_run_context * rc)
+{
+        ntb_run_context_free(rc);
 }
 void
 ntb_connect(struct ntb_run_context * rc)

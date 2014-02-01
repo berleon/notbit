@@ -21,6 +21,7 @@
 #include "ntb-keyring.h"
 #include "ntb-ipc.h"
 #include "ntb-run.h"
+#include "ntb-util.h"
 
 struct ntb_run_context {
         struct ntb_main_context * mc;
@@ -282,14 +283,22 @@ add_addresses(struct ntb_run_config * rc,struct ntb_network *nw,
         return true;
 }
 
-static bool
-set_log_file(struct ntb_run_config * rc,
-             struct ntb_store *store,
-             struct ntb_error **error)
+struct ntb_run_config *
+ntb_run_config_default()
 {
-        struct ntb_buffer buffer;
-        bool res;
-
+        struct ntb_run_config * rconf =
+            ntb_alloc(sizeof (struct ntb_run_config));
+        rconf->option_listen_addresses = NULL;
+        rconf->option_peer_addresses = NULL;
+        rconf->option_log_file = NULL;
+        rconf->option_daemonize = false;
+        rconf->option_user = NULL;
+        rconf->option_group = NULL;
+        rconf->option_store_directory = NULL;
+        rconf->option_mail_dir = NULL;
+        rconf->option_only_explicit_addresses = false;
+        return rconf;
+}
 
 
 void
