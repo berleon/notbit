@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -19,43 +21,23 @@
 #include "ntb-file-error.h"
 #include "ntb-keyring.h"
 #include "ntb-ipc.h"
-#include "ntb-config.h"
+#include "ntb-run.h"
 
-struct ntb_api_context {
-    struct ntb_main_context * nm;
-    struct ntb_config * config;
-    struct ntb_error * error;
-};
 
-struct ntb_main_context *
-ntb_init()
+struct ntb_run_context *
+ntb_init(struct ntb_run_config * config)
 {
-        struct ntb_main_context *mc;
-        struct ntb_error *error = NULL;
-
-        mc = ntb_main_context_get_default(&error);
-
-        if (mc == NULL) {
-                fprintf(stderr, "%s\n", error->message);
-                return NULL;
-        }
-        return mc;
+    return ntb_run_context_new(config);
 }
 void
-ntb_connect(struct ntb_main_context * mc)
+ntb_connect(struct ntb_run_context * rc)
 {
-        int ret = EXIT_SUCCESS;
-        ret = run_network();
-
-        ntb_main_context_free(mc);
-
-        free_addresses(option_peer_addresses);
-        free_addresses(option_listen_addresses);
-
+    ntb_run_network(rc);
 }
 
 void
-ntb_get_message(struct ntb_main_context * mc) {
+ntb_get_messages(struct ntb_run_context * rc)
+{
 
 }
 

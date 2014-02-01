@@ -32,6 +32,7 @@
 
 #include "ntb-buffer.h"
 #include "ntb-netaddress.h"
+#include "ntb-endian.h"
 
 extern struct ntb_error_domain
 ntb_proto_error;

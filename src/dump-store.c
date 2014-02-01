@@ -33,6 +33,8 @@
 
 #include "ntb-util.h"
 #include "ntb-buffer.h"
+#include "ntb-endian.h"
+
 
 #define NTB_PROTO_HASH_LENGTH (512 / 8 / 2)
 

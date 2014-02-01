@@ -14,6 +14,8 @@ AM_CPPFLAGS = \
 libnotbit_la_SOURCES = \
 	ntb-address.c \
 	ntb-address.h \
+	ntb-api.c \
+	ntb-api.h \
 	ntb-base58.c \
 	ntb-base58.h \
 	ntb-base64.c \

@@ -45,6 +45,7 @@
 #include "ntb-address.h"
 #include "ntb-slice.h"
 #include "ntb-hash-table.h"
+#include "ntb-endian.h"
 
 struct ntb_keyring {
         struct ntb_network *nw;

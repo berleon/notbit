@@ -31,6 +31,7 @@
 #include <stdarg.h>
 #include <assert.h>
 
+#include "ntb-endian.h"
 #include "ntb-proto.h"
 #include "ntb-util.h"
 #include "ntb-ecc.h"

@@ -27,8 +27,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "ntb-util.h"
-
 #ifdef __cplusplus
 extern "C"{
 #endif

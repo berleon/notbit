@@ -26,7 +26,6 @@
 
 #include <stdint.h>
 
-#include "ntb-util.h"
 #include "ntb-error.h"
 
 enum ntb_main_context_error {

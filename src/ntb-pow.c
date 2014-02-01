@@ -34,6 +34,7 @@
 #include "ntb-list.h"
 #include "ntb-file-error.h"
 #include "ntb-main-context.h"
+#include "ntb-endian.h"
 
 struct ntb_pow {
         int n_threads;

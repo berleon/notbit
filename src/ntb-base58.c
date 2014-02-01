@@ -27,6 +27,7 @@
 #include <assert.h>
 
 #include "ntb-base58.h"
+#include "ntb-util.h"
 
 static const char
 alphabet[] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
