@@ -56,6 +56,11 @@
 #define NTB_STRINGIFY(macro_or_string) NTB_STRINGIFY_ARG(macro_or_string)
 #define NTB_STRINGIFY_ARG(contents) #contents
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
+
 void *
 ntb_alloc(size_t size);
 
@@ -127,5 +132,10 @@ ntb_create_thread(void *(* thread_func)(void *),
                             __LINE__,                                   \
                             __FILE__);                                  \
         } NTB_STMT_END
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif /* NTB_UTIL_H */

@@ -169,14 +169,14 @@ struct ntb_network_listen_socket {
 
 struct ntb_network {
         struct ntb_main_context_source *gc_source;
+        struct ntb_network_stats stats;
+        bool connected;
 
+        struct ntb_main_context * main_context;
         struct ntb_list listen_sockets;
 
-        int n_outgoing_peers;
-        int n_incoming_peers;
         struct ntb_list peers;
 
-        int n_unconnected_addrs;
         struct ntb_list addrs;
         bool only_use_explicit_addresses;
 
@@ -364,15 +364,15 @@ remove_peer(struct ntb_network *nw,
         ntb_connection_free(peer->connection);
 
         if (peer->addr) {
-                nw->n_unconnected_addrs++;
+                nw->stats.n_unconnected_addrs++;
                 peer->addr->connected = false;
         }
         switch (peer->direction) {
         case NTB_NETWORK_OUTGOING:
-                nw->n_outgoing_peers--;
+                nw->stats.n_outgoing_peers--;
                 break;
         case NTB_NETWORK_INCOMING:
-                nw->n_incoming_peers--;
+                nw->stats.n_incoming_peers--;
                 break;
         }
 
@@ -391,7 +391,7 @@ remove_addr(struct ntb_network *nw,
 
         ntb_list_remove(&addr->link);
         ntb_slice_free(&ntb_network_addr_allocator, addr);
-        nw->n_unconnected_addrs--;
+        nw->stats.n_unconnected_addrs--;
 }
 
 static bool
@@ -472,7 +472,7 @@ connect_to_addr(struct ntb_network *nw,
 
         addr->last_connect_time = ntb_main_context_get_monotonic_clock(NULL);
 
-        connection = ntb_connection_connect(&addr->address, &error);
+        connection = ntb_connection_connect(&addr->address, &nw->stats, &error);
 
         if (connection == NULL) {
                 ntb_log("%s", error->message);
@@ -486,7 +486,7 @@ connect_to_addr(struct ntb_network *nw,
         peer->addr = addr;
 
         peer->direction = NTB_NETWORK_OUTGOING;
-        nw->n_outgoing_peers++;
+        nw->stats.n_outgoing_peers++;
 
         send_version_to_peer(nw, peer);
 
@@ -505,8 +505,8 @@ connect_queue_cb(struct ntb_main_context_source *source,
         /* If we've reached the number of outgoing peers then we can
          * stop trying to connect any more. There's also no point in
          * continuing if we've run out of unconnected addrs */
-        if (nw->n_outgoing_peers >= NTB_NETWORK_NUM_OUTGOING_PEERS ||
-            nw->n_unconnected_addrs <= 0) {
+        if (nw->stats.n_outgoing_peers >= NTB_NETWORK_NUM_OUTGOING_PEERS ||
+            nw->stats.n_unconnected_addrs <= 0) {
                 remove_connect_queue_source(nw);
                 return;
         }
@@ -534,7 +534,7 @@ connect_queue_cb(struct ntb_main_context_source *source,
 
         if (connect_to_addr(nw, addr)) {
                 addr->connected = true;
-                nw->n_unconnected_addrs--;
+                nw->stats.n_unconnected_addrs--;
         }
 }
 
@@ -544,11 +544,11 @@ maybe_queue_connect(struct ntb_network *nw,
 {
         /* If we've already got enough outgoing peers then we don't
          * need to do anything */
-        if (nw->n_outgoing_peers >= NTB_NETWORK_NUM_OUTGOING_PEERS)
+        if (nw->stats.n_outgoing_peers >= NTB_NETWORK_NUM_OUTGOING_PEERS)
                 return;
 
         /* Or if we don't have any addrs to connect to */
-        if (nw->n_unconnected_addrs <= 0)
+        if (nw->stats.n_unconnected_addrs <= 0)
                 return;
 
         if (nw->connect_queue_source) {
@@ -584,7 +584,7 @@ new_addr(struct ntb_network *nw)
         ntb_list_insert(&nw->addrs, &addr->link);
         addr->connected = false;
         addr->type = NTB_NETWORK_ADDR_DISCOVERED;
-        nw->n_unconnected_addrs++;
+        nw->stats.n_unconnected_addrs++;
 
         addr->last_connect_time = 0;
 
@@ -805,7 +805,7 @@ handle_version(struct ntb_network *nw,
         if (addr && peer->addr == NULL && !addr->connected) {
                 peer->addr = addr;
                 addr->connected = true;
-                nw->n_unconnected_addrs--;
+                nw->stats.n_unconnected_addrs--;
         }
 
         ntb_connection_send_verack(peer->connection);
@@ -1424,7 +1424,7 @@ listen_socket_source_cb(struct ntb_main_context_source *source,
         struct ntb_error *error = NULL;
         struct ntb_network_peer *peer;
 
-        conn = ntb_connection_accept(fd, &error);
+        conn = ntb_connection_accept(fd, &nw->stats, &error);
 
         if (conn == NULL) {
                 if (error->domain != &ntb_file_error ||
@@ -1443,14 +1443,14 @@ listen_socket_source_cb(struct ntb_main_context_source *source,
         peer->state = NTB_NETWORK_PEER_STATE_AWAITING_VERSION_IN;
 
         peer->direction = NTB_NETWORK_INCOMING;
-        nw->n_incoming_peers++;
+        nw->stats.n_incoming_peers++;
 }
 
 static void
 update_listen_socket_source(struct ntb_network *nw,
                             struct ntb_network_listen_socket *listen_socket)
 {
-        if (nw->n_incoming_peers >= NTB_NETWORK_MAX_INCOMING_PEERS) {
+        if (nw->stats.n_incoming_peers >= NTB_NETWORK_MAX_INCOMING_PEERS) {
                 if (listen_socket->source) {
                         ntb_main_context_remove_source(listen_socket->source);
                         listen_socket->source = NULL;
@@ -1502,16 +1502,20 @@ add_addr_string(struct ntb_network *nw,
 }
 
 struct ntb_network *
-ntb_network_new(void)
+ntb_network_new(struct ntb_main_context *main_context)
 {
         struct ntb_network *nw = ntb_alloc(sizeof *nw);
         struct ntb_network_addr *addr;
         size_t hash_offset;
         int i;
 
+        nw->connected = false;
+        nw->main_context = main_context;
+
         ntb_list_init(&nw->listen_sockets);
         ntb_list_init(&nw->peers);
         ntb_list_init(&nw->addrs);
+
         ntb_list_init(&nw->accepted_inventories);
         ntb_list_init(&nw->rejected_inventories);
         nw->n_rejected_inventories = 0;
@@ -1519,9 +1523,12 @@ ntb_network_new(void)
 
         ntb_signal_init(&nw->new_object_signal);
 
-        nw->n_outgoing_peers = 0;
-        nw->n_incoming_peers = 0;
-        nw->n_unconnected_addrs = 0;
+        nw->stats.n_outgoing_peers = 0;
+        nw->stats.n_incoming_peers = 0;
+        nw->stats.n_unconnected_addrs = 0;
+        nw->stats.n_bytes_recieved = 0;
+        nw->stats.n_bytes_send = 0;
+
         nw->connect_queue_source = NULL;
         nw->only_use_explicit_addresses = false;
 
@@ -1755,9 +1762,9 @@ ntb_network_free(struct ntb_network *nw)
 
         remove_connect_queue_source(nw);
 
-        assert(nw->n_outgoing_peers == 0);
-        assert(nw->n_incoming_peers == 0);
-        assert(nw->n_unconnected_addrs == 0);
+        assert(nw->stats.n_outgoing_peers == 0);
+        assert(nw->stats.n_incoming_peers == 0);
+        assert(nw->stats.n_unconnected_addrs == 0);
 
         free(nw);
 }

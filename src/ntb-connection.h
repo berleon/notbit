@@ -29,6 +29,7 @@
 
 #include "ntb-error.h"
 #include "ntb-netaddress.h"
+#include "ntb-network.h"
 #include "ntb-buffer.h"
 #include "ntb-main-context.h"
 #include "ntb-signal.h"
@@ -107,10 +108,12 @@ struct ntb_connection *connection;
 
 struct ntb_connection *
 ntb_connection_connect(const struct ntb_netaddress *address,
+                       struct ntb_network_stats *nw_stats,
                        struct ntb_error **error);
 
 struct ntb_connection *
 ntb_connection_accept(int server_sock,
+                      struct ntb_network_stats *nw_stats,
                       struct ntb_error **error);
 
 void

@@ -29,6 +29,12 @@
 #include "ntb-error.h"
 #include "ntb-signal.h"
 #include "ntb-blob.h"
+#include "ntb-main-context.h"
+
+
+#ifdef __cplusplus
+extern "C"{
+#endif
 
 extern struct ntb_error_domain
 ntb_network_error;
@@ -50,8 +56,18 @@ enum ntb_network_object_location {
 
 struct ntb_network;
 
+struct ntb_network_stats {
+        int n_outgoing_peers;
+        int n_incoming_peers;
+        int n_unconnected_addrs;
+        long n_bytes_recieved;
+        long n_bytes_send;
+};
+
 struct ntb_network *
-ntb_network_new(void);
+ntb_network_new(struct ntb_main_context *main_context);
+const struct ntb_network_stats *
+ntb_network_get_stats(const struct ntb_network * const nw);
 
 void
 ntb_network_add_object_from_data(struct ntb_network *nw,
@@ -94,5 +110,9 @@ ntb_network_get_object(struct ntb_network *nw,
 
 void
 ntb_network_free(struct ntb_network *nw);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* NTB_NETWORK_H */

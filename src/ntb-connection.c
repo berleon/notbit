@@ -39,6 +39,7 @@
 #include "ntb-util.h"
 #include "ntb-slice.h"
 #include "ntb-main-context.h"
+#include "ntb-network.h"
 #include "ntb-buffer.h"
 #include "ntb-log.h"
 #include "ntb-store.h"
@@ -72,6 +73,7 @@ struct ntb_connection {
         struct ntb_main_context_source *timer_source;
         int sock;
 
+        struct ntb_network_stats * nw_stats;
         struct ntb_buffer in_buf;
         struct ntb_buffer out_buf;
 
@@ -694,6 +696,7 @@ handle_read(struct ntb_connection *conn)
                 conn->last_read_time =
                         ntb_main_context_get_monotonic_clock(NULL);
                 conn->in_buf.length += got;
+                conn->nw_stats->n_bytes_recieved += got;
                 process_commands(conn);
         }
 }
@@ -842,6 +845,7 @@ handle_write(struct ntb_connection *conn)
                         conn->out_buf.length - wrote);
                 conn->out_buf.length -= wrote;
 
+                conn->nw_stats->n_bytes_send += wrote;
                 conn->last_write_time =
                         ntb_main_context_get_monotonic_clock(NULL);
 
@@ -926,12 +930,14 @@ ntb_connection_free(struct ntb_connection *conn)
 
 static struct ntb_connection *
 ntb_connection_new_for_socket(int sock,
-                              const struct ntb_netaddress *remote_address)
+                              const struct ntb_netaddress *remote_address,
+                              struct ntb_network_stats *nw_stats)
 {
         struct ntb_connection *conn;
 
         conn = ntb_slice_alloc(&ntb_connection_allocator);
 
+        conn->nw_stats = nw_stats;
         conn->sock = sock;
         conn->remote_address = *remote_address;
         conn->remote_address_string = ntb_netaddress_to_string(remote_address);
@@ -984,6 +990,7 @@ ntb_connection_get_remote_address(struct ntb_connection *conn)
 
 struct ntb_connection *
 ntb_connection_connect(const struct ntb_netaddress *address,
+                       struct ntb_network_stats *nw_stats,
                        struct ntb_error **error)
 {
         struct ntb_netaddress_native native_address;
@@ -1024,11 +1031,12 @@ ntb_connection_connect(const struct ntb_netaddress *address,
                 return NULL;
         }
 
-        return ntb_connection_new_for_socket(sock, address);
+        return ntb_connection_new_for_socket(sock, address, nw_stats);
 }
 
 struct ntb_connection *
 ntb_connection_accept(int server_sock,
+                      struct ntb_network_stats *nw_stats,
                       struct ntb_error **error)
 {
         struct ntb_netaddress address;
@@ -1059,7 +1067,7 @@ ntb_connection_accept(int server_sock,
 
         ntb_netaddress_from_native(&address, &native_address);
 
-        conn = ntb_connection_new_for_socket(sock, &address);
+        conn = ntb_connection_new_for_socket(sock, &address, nw_stats);
 
         conn->connect_succeeded = true;
 
