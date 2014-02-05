@@ -462,7 +462,7 @@ run_main_loop(struct ntb_network *nw,
 }
 
 static int
-run_network(void)
+run_network(struct ntb_main_context * mc)
 {
         struct ntb_store *store = NULL;
         struct ntb_network *nw;
@@ -471,7 +471,7 @@ run_network(void)
         int ret = EXIT_SUCCESS;
         struct ntb_error *error = NULL;
 
-        nw = ntb_network_new();
+        nw = ntb_network_new(mc);
 
         if (!add_addresses(nw, &error)) {
                 fprintf(stderr, "%s\n", error->message);
@@ -539,7 +539,7 @@ ntb_daemon(int argc, char **argv)
 
         mc = ntb_main_context_get_default();
 
-        ret = run_network();
+        ret = run_network(mc);
 
         ntb_main_context_free(mc);
 

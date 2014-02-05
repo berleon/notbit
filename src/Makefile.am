@@ -120,10 +120,6 @@ libnotbit_la_LDFLAGS = \
 	$(NULL)
 
 dump_store_SOURCES = \
-	ntb-buffer.c \
-	ntb-buffer.h \
-	ntb-util.c \
-	ntb-util.h \
 	dump-store.c \
 	$(NULL)
 

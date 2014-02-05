@@ -27,6 +27,7 @@
 
 #include "ntb-ipc-proto.h"
 #include "ntb-buffer.h"
+#include "ntb-endian.h"
 
 void
 ntb_ipc_proto_begin_command(struct ntb_buffer *buffer,
