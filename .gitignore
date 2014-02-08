@@ -49,6 +49,8 @@ libtool
 /tests/test_ntb_base58
 /tests/test_ntb_api
 
+/extern/openssl
+/extern/openssl*/
 
 *.o
 *.lo
