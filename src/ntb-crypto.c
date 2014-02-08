@@ -228,8 +228,8 @@ free_generate_ackdata_cookie(struct ntb_crypto_cookie *cookie)
 {
 }
 
-static void
-unref_cookie(struct ntb_crypto_cookie *cookie)
+void
+ntb_crypto_unref_cookie(struct ntb_crypto_cookie *cookie)uct ntb_crypto_cookie *cookie)
 {
         /* This should only be called with the lock */
 
@@ -876,7 +876,7 @@ idle_cb(struct ntb_main_context_source *source,
 
         pthread_mutex_lock(&crypto->mutex);
 
-        unref_cookie(cookie);
+        ntb_crypto_unref_cookie(cookie);
 
         pthread_mutex_unlock(&crypto->mutex);
 
@@ -952,7 +952,7 @@ thread_func(void *user_data)
                                                                   cookie);
                 }
 
-                unref_cookie(cookie);
+                ntb_crypto_unref_cookie(cookie);
         }
 
         pthread_mutex_unlock(&crypto->mutex);
@@ -1192,7 +1192,7 @@ ntb_crypto_cancel_task(struct ntb_crypto_cookie *cookie)
         /* The queue holds a reference to the cookie */
         if (cookie->in_queue) {
                 ntb_list_remove(&cookie->link);
-                unref_cookie(cookie);
+                ntb_crypto_unref_cookie(cookie);
         }
 
         cookie->cancelled = true;
@@ -1201,7 +1201,7 @@ ntb_crypto_cancel_task(struct ntb_crypto_cookie *cookie)
                 ntb_main_context_remove_source(cookie->idle_source);
 
         /* One reference is held by the caller */
-        unref_cookie(cookie);
+        ntb_crypto_unref_cookie(cookie);
 
         pthread_mutex_unlock(&crypto->mutex);
 }

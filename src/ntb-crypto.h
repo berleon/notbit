@@ -116,6 +116,9 @@ ntb_crypto_generate_ackdata(struct ntb_crypto *crypto,
                             void *user_data);
 
 void
+ntb_crypto_unref_cookie(struct ntb_crypto_cookie *cookie);
+
+void
 ntb_crypto_cancel_task(struct ntb_crypto_cookie *cookie);
 
 void
