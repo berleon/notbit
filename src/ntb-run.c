@@ -165,52 +165,6 @@ free_addresses(struct address *list)
 
 
 
-static void
-set_user(const char *user_name)
-{
-        struct passwd *user_info;
-
-        user_info = getpwnam(user_name);
-
-        if (user_info == NULL) {
-                fprintf(stderr, "Unknown user \"%s\"\n", user_name);
-                exit(EXIT_FAILURE);
-        }
-
-        if (setuid(user_info->pw_uid) == -1) {
-                fprintf(stderr, "Error setting user privileges: %s\n",
-                        strerror(errno));
-                exit(EXIT_FAILURE);
-        }
-}
-
-static void
-set_group(const char *group_name)
-{
-        struct group *group_info;
-
-        group_info = getgrnam(group_name);
-
-        if (group_info == NULL) {
-                fprintf(stderr, "Unknown group \"%s\"\n", group_name);
-                exit(EXIT_FAILURE);
-        }
-
-        if (setgid(group_info->gr_gid) == -1) {
-                fprintf(stderr, "Error setting group privileges: %s\n",
-                        strerror(errno));
-                exit(EXIT_FAILURE);
-        }
-}
-
-static void
-quit_cb(struct ntb_main_context_source *source,
-        void *user_data)
-{
-        bool *quit = user_data;
-        *quit = true;
-}
-
 static bool
 add_listen_address_to_network(struct ntb_network *nw,
                               struct address *address,
