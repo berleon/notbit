@@ -121,6 +121,9 @@ ntb_log_thread_func(void *data)
                 while (!ntb_log_finished && ntb_log_buffer.length == 0)
                         pthread_cond_wait(&ntb_log_cond, &ntb_log_mutex);
 
+                if (ntb_log_finished)
+                    break;
+
                 if (had_error) {
                         /* Just ignore the data */
                         ntb_buffer_set_length(&ntb_log_buffer, 0);
