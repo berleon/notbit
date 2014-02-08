@@ -301,6 +301,7 @@ handle_create_key(struct ntb_crypto_cookie *cookie)
         char address_string[NTB_ADDRESS_MAX_LENGTH + 1];
         SHA512_CTX sha_ctx;
         int attempts = 0;
+        void (*callback)(struct ntb_key *, void *);
 
         ntb_log("Generating key pair");
 
@@ -347,6 +348,11 @@ handle_create_key(struct ntb_crypto_cookie *cookie)
                 attempts,
                 attempts == 1 ? "" : "s",
                 address_string);
+
+        if(cookie->func) {
+                callback = cookie->func;
+                callback(cookie->create_key.key, cookie->user_data);
+        }
 }
 
 static void

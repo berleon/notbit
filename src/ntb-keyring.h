@@ -76,6 +76,9 @@ void
 ntb_keyring_cancel_task(struct ntb_keyring_cookie *cookie);
 
 void
+ntb_keyring_cookie_free(struct ntb_keyring_cookie *cookie);
+
+void
 ntb_keyring_free(struct ntb_keyring *crypto);
 
 #endif /* NTB_KEYRING_H */

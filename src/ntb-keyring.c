@@ -1919,6 +1919,13 @@ free_messages(struct ntb_keyring *keyring)
 }
 
 void
+ntb_keyring_cookie_free(struct ntb_keyring_cookie *cookie)
+{
+        ntb_crypto_unref_cookie(cookie->crypto_cookie);
+        ntb_free(cookie);
+}
+
+void
 ntb_keyring_free(struct ntb_keyring *keyring)
 {
         int i;
