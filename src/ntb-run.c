@@ -300,6 +300,11 @@ ntb_run_config_default()
         return rconf;
 }
 
+void
+ntb_run_config_free(struct ntb_run_config *conf)
+{
+    ntb_free(conf);
+}
 
 void
 ntb_run_network(struct ntb_run_context * rc)
