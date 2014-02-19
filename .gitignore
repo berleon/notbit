@@ -13,6 +13,7 @@
 /build/depcomp
 /build/install-sh
 /build/missing
+/build/ltmain.sh
 
 /config.h
 /config.h.in
@@ -48,6 +49,8 @@ libtool
 /tests/test_ntb_buffer
 /tests/test_ntb_base58
 /tests/test_ntb_api
+/tests/test_ntb_network
+/tests/test-ntb-file
 
 /extern/openssl
 /extern/openssl*/

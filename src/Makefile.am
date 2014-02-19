@@ -42,6 +42,8 @@ libnotbit_la_SOURCES = \
 	ntb-error.h \
 	ntb-file-error.c \
 	ntb-file-error.h \
+	ntb-file.c \
+	ntb-file.h \
 	ntb-hash-table.c \
 	ntb-hash-table.h \
 	ntb-ipc.c \
@@ -78,8 +80,6 @@ libnotbit_la_SOURCES = \
 	ntb-netaddress.h \
 	ntb-network.c \
 	ntb-network.h \
-	ntb-run.c \
-	ntb-run.h \
 	ntb-parse-addresses.c \
 	ntb-parse-addresses.h \
 	ntb-parse-content-type.c \
@@ -94,6 +94,8 @@ libnotbit_la_SOURCES = \
 	ntb-ref-count.h \
 	ntb-save-message.c \
 	ntb-save-message.h \
+	ntb-run.c \
+	ntb-run.h \
 	ntb-sendmail.c \
 	ntb-sendmail.h \
 	ntb-signal.h \
