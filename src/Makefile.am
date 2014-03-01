@@ -99,6 +99,7 @@ libnotbit_la_SOURCES = \
 	ntb-sendmail.c \
 	ntb-sendmail.h \
 	ntb-signal.h \
+	ntb-signal.c \
 	ntb-slab.c \
 	ntb-slab.h \
 	ntb-slice.c \

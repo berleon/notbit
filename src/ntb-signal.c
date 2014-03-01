@@ -23,36 +23,30 @@
 
 /* This file was originally borrowed from the Wayland source code */
 
-#ifndef NTB_SIGNAL_H
-#define NTB_SIGNAL_H
 
-#include <stdbool.h>
-
-#include "ntb-list.h"
-
-struct ntb_listener;
-
-typedef bool
-(* ntb_notify_func)(struct ntb_listener *listener, void *data);
-
-struct ntb_signal {
-        struct ntb_list listener_list;
-};
-
-struct ntb_listener {
-        struct ntb_list link;
-        ntb_notify_func notify;
-};
+#include "ntb-signal.h"
 
 void
-ntb_signal_init(struct ntb_signal *signal);
+ntb_signal_init(struct ntb_signal *signal)
+{
+        ntb_list_init(&signal->listener_list);
+}
 
 void
 ntb_signal_add(struct ntb_signal *signal,
-               struct ntb_listener *listener);
+               struct ntb_listener *listener)
+{
+        ntb_list_insert(signal->listener_list.prev, &listener->link);
+}
 
 bool
-ntb_signal_emit(struct ntb_signal *signal, void *data);
+ntb_signal_emit(struct ntb_signal *signal, void *data)
+{
+        struct ntb_listener *l, *next;
 
+        ntb_list_for_each_safe(l, next, &signal->listener_list, link)
+                if (!l->notify(l, data))
+                        return false;
 
-#endif /* NTB_SIGNAL_H */
+        return true;
+}
