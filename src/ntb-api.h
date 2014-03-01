@@ -3,11 +3,7 @@
 
 #include "ntb-main-context.h"
 #include "ntb-run.h"
-
-
-#ifdef __cplusplus
-extern "C"{
-#endif
+#include "ntb-keyring.h"
 
 
 struct ntb_run_context *
@@ -24,10 +20,11 @@ ntb_disconnect(struct ntb_run_context *rc);
 
 void
 ntb_create_key(struct ntb_run_context * rc,
-                       const char *label,
-                       const int leading_zeroes,
-                       ntb_keyring_create_key_func func,
-                       void *user_data);
+               const char *label,
+               int leading_zeroes,
+               uint64_t version,
+               ntb_keyring_create_key_func callback,
+               void *user_data);
 
 bool
 ntb_send_message(struct ntb_run_context * rc,
@@ -37,12 +34,5 @@ ntb_send_message(struct ntb_run_context * rc,
                  int content_encoding,
                  const uint8_t * content,
                  size_t content_length);
-
-
-#ifdef __cplusplus
-}
-#endif
-
-
 
 #endif /* NTB_API_H */

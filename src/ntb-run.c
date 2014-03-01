@@ -23,15 +23,6 @@
 #include "ntb-run.h"
 #include "ntb-util.h"
 
-struct ntb_run_context {
-        struct ntb_main_context * mc;
-        struct ntb_run_config * config;
-        struct ntb_error * error;
-        struct ntb_network * network;
-        struct ntb_keyring * keyring;
-        struct ntb_store * store;
-};
-
 struct ntb_run_config {
         struct address *option_listen_addresses;
         struct address *option_peer_addresses;
@@ -88,8 +79,8 @@ ntb_run_context_new(struct ntb_run_config * config)
         rc = ntb_alloc(sizeof (struct ntb_run_context));
 
         rc->config = config;
-
-        rc->network = ntb_network_new();
+        rc->mc = ntb_main_context_new();
+        rc->network = ntb_network_new(rc->mc);
         rc->store = ntb_store_new(rc->config->option_store_directory,
                                       rc->config->option_mail_dir,
                                       &rc->error);
@@ -105,6 +96,7 @@ ntb_run_context_new(struct ntb_run_config * config)
                 }
 
                 rc->keyring = ntb_keyring_new(rc->network);
+                ntb_keyring_start(rc->keyring);
         }
         return rc;
 }
@@ -260,16 +252,20 @@ ntb_run_config_free(struct ntb_run_config *conf)
     ntb_free(conf);
 }
 
+static void
+quit_cb(struct ntb_main_context_source *source,
+        void *user_data)
+{
+        bool *quit = user_data;
+        *quit = true;
+}
+
+
 void
 ntb_run_network(struct ntb_run_context * rc)
 {
         struct ntb_main_context_source *quit_source;
         bool quit = false;
-
-        if (rc->config->option_group)
-                set_group(rc->config->option_group);
-        if (rc->config->option_user)
-                set_user(rc->config->option_user);
 
         ntb_keyring_start(rc->keyring);
         ntb_store_start(rc->store);

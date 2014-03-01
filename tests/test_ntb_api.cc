@@ -28,7 +28,7 @@ on_create(struct ntb_key *key,
 TEST(ntb_api, DISABLED_init)
 {
         struct ntb_run_context * rc = ntb_init(NULL);
-        ntb_connect(rc);
+        // ntb_connect(rc);
         ntb_destroy(rc);
 }
 TEST(ntb_api, create_key)
@@ -36,10 +36,19 @@ TEST(ntb_api, create_key)
         main_thread = pthread_self();
         pthread_cond_init(&on_create_cond, NULL);
         pthread_mutex_lock(&on_create_mutex);
+
         struct ntb_run_config *conf = ntb_run_config_default();
         struct ntb_run_context *rc = ntb_init(conf);
         const int leading_zeroes = 0;
-        ntb_create_key(rc, "test-key", leading_zeroes, on_create, rc);
+        int version = 4;
+
+        ntb_create_key(rc,
+                       "test-key",
+                       leading_zeroes,
+                       version,
+                       on_create,
+                       rc);
+
         pthread_cond_wait(&on_create_cond, &on_create_mutex);
         ntb_destroy(rc);
         ntb_run_config_free(rc->config);

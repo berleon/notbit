@@ -229,8 +229,7 @@ free_generate_ackdata_cookie(struct ntb_crypto_cookie *cookie)
 }
 
 void
-ntb_crypto_unref_cookie(struct ntb_crypto_cookie *cookie)uct ntb_crypto_cookie *cookie)
-{
+ntb_crypto_unref_cookie(struct ntb_crypto_cookie *cookie){
         /* This should only be called with the lock */
 
         if (--cookie->ref_count <= 0) {
