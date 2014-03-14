@@ -775,7 +775,23 @@ handle_version(struct ntb_network *nw,
 
         if (event->nonce == nw->nonce) {
                 ntb_log("Connected to self from %s", remote_address_string);
-                remove_peer(nw, peer);
+
+                /* We must say that we are connected to prevent additional
+                 * reconnects. This is convenient because we are technically
+                 * always connected to ourselves. */
+                remote_address =
+                        *ntb_connection_get_remote_address(peer->connection);
+                remote_address.port = event->addr_from.port;
+                addr = add_addr(nw,
+                                event->timestamp,
+                                stream,
+                                event->services,
+                                &remote_address);
+                if (addr && !addr->connected) {
+                        addr->connected = true;
+                        nw->n_unconnected_addrs--;
+                        peer->addr = addr;
+                }
                 return false;
         }
 
